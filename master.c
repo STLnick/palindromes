@@ -9,25 +9,25 @@ int main (int argc, char **argv)
   hflag = nflag = sflag = tflag = 0;
   proc_cnt = 0; // Counter for currently running children processes
 
+  // Parse command line options
   while ((opt = getopt(argc, argv, "hn:s:t:")) != -1)
   {
     switch (opt)
     {
-      case 'h': // The default values case
+      case 'h': // Help - describe how to run program and default values
         hflag = 1;
-        num_proc = 4; // Number of processes to be ran in total
-        num_children = 2; // Number of children to be running at any one time
-        run_time = 100; // Seconds the program will run if processes don't finish first
+        printf("-h option used. describe and TERMINATE.");
+        exit(EXIT_SUCCESS);
         break; 
-      case 'n':
+      case 'n': // Specify number of processes to be ran in total
         nflag = 1;
         num_proc = atoi(optarg);
         break;
-      case 's':
+      case 's': // Specify number of children to be running at any one time
         sflag = 1;
         num_children = atoi(optarg);
         break;
-      case 't':
+      case 't': // Specify number of seconds the program will run before terminating
         tflag = 1;
         run_time = atoi(optarg);
         break;
