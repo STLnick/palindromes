@@ -5,8 +5,8 @@
 int main (int argc, char **argv)
 {
   int num_proc, num_children, opt, proc_cnt, run_time;
-  int hflag, nflag, sflag, tflag; // Flags for command line options
-  hflag = nflag = sflag = tflag = 0;
+  int nflag, sflag, tflag; // Flags for command line options
+  nflag = sflag = tflag = 0;
   proc_cnt = 0; // Counter for currently running children processes
 
   // Parse command line options
@@ -15,8 +15,23 @@ int main (int argc, char **argv)
     switch (opt)
     {
       case 'h': // Help - describe how to run program and default values
-        hflag = 1;
-        printf("-h option used. describe and TERMINATE.");
+        printf("\nPalindrome master program\n");
+        printf("-------------------------\n");
+        printf("Example command to run ./master:\n\n");
+        printf("./master -n 10 -s 4 -t 60\n\n");
+        printf("-------------------------\n");
+        printf("Program options information:\n");
+        printf("-n = The total number of processes to be ran.\n");
+        printf("-s = The number of children processes to be running at any one time.\n");
+        printf("-t = The time in seconds that the program will execute. This will end\n");
+        printf("     execution even if the processes haven't finished the tasks.\n\n");
+        printf("-------------------------\n");
+        printf("Default value information:\n");
+        printf("All options specified above are optional and will use the\n");
+        printf("following default values if not specified.\n\n");
+        printf("-n = 4\n");
+        printf("-s = 2\n");
+        printf("-t = 100\n\n");
         exit(EXIT_SUCCESS);
         break; 
       case 'n': // Specify number of processes to be ran in total
@@ -34,13 +49,10 @@ int main (int argc, char **argv)
     }
   }
 
-  // Set default values for unused options if -h wasn't used
-  if (!hflag)
-  {
-    num_proc = nflag ? num_proc : 4;
-    num_children = sflag ? num_children : 2;
-    run_time = tflag ? run_time : 100;
-  }
+  // Set default values for unused options
+  num_proc = nflag ? num_proc : 4;
+  num_children = sflag ? num_children : 2;
+  run_time = tflag ? run_time : 100;
 
   printf("num_proc: %d\n", num_proc);
   printf("num_children: %d\n", num_children);
