@@ -1,12 +1,22 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/shm.h>
+#include <sys/wait.h>
+
+int detachandremove(int shmid, void *shmaddr);
 
 int main (int argc, char **argv)
 {
+  int childpid; // PID of a child process
+  int id; // ID for the shared memory segment
+  int key = 93; // Key to allocate shared memory segment
   int num_proc, num_children, opt, proc_cnt, run_time;
-  int nflag, sflag, tflag; // Flags for command line options
-  nflag = sflag = tflag = 0;
+  int nflag = 0, sflag = 0, tflag = 0; // Flags for command line options
   proc_cnt = 0; // Counter for currently running children processes
 
   // Parse command line options
@@ -60,5 +70,67 @@ int main (int argc, char **argv)
   printf("num_proc: %d\n", num_proc);
   printf("num_children: %d\n", num_children);
   printf("run_time: %d\n", run_time);
+
+
+  // TESTING STRING ARRAY
+  char *strings[3] = {"how's", "it", "going?"};
+  char *sharedstrings[3];
+
+  // dummy shared value
+  int *sharedtotal;
+
+  // Allocate shared memory segment
+  // TODO: Change the sizeof() after testing with simple data type
+  if ((id = shmget(key, sizeof(int), IPC_CREAT | 0660)) == -1)
+  {
+    perror("Failed to create shared memory segment.");
+    return 1;
+  }
+
+  // TESTING MESSAGE IF WE SUCCESSFULLY GET SHARED MEMORY
+  printf("Successfully allocated shared memory with id: %d\n", id);
+
+  // Attach to the allocated shared memory
+  //if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
+  //{
+  //  perror("Failed to attach shared memory segment.");
+  //  if (shmctl(id, IPC_RMID, NULL) == -1)
+  //    perror("Failed to remove memory segment.");
+  //  return 1;
+  //}
+
+  // TESTING WITH BASIC DATA TYPE Attach to the allocated shared memory
+  if ((sharedtotal = (int *) shmat(id, NULL, 0)) == (void *) - 1)
+  {
+    perror("Failed to attach shared memory segment.");
+    if (shmctl(id, IPC_RMID, NULL) == -1)
+      perror("Failed to remove memory segment.");
+    return 1;
+  }
+
+  // Detach from and remove the shared memory segment
+  // TODO: TESTING WITH SIMPLE DATA TYPE: Change second argument after testing
+  detachandremove(id, sharedtotal);
+
+
+
   return 0;
+}
+
+// Detach from and delete the shared memory segment
+int detachandremove(int shmid, void *shmaddr)
+{
+  int error = 0;
+
+  if (shmdt(shmaddr) == -1)
+    error = errno;
+  if ((shmctl(shmid, IPC_RMID, NULL) == -1) && !error)
+    error = errno;
+  if (!error)
+  {
+    printf("Successfully detached and removed the shared memory segment - id: %d\n", shmid);
+    return 0;
+  }
+  errno = error;
+  return -1;
 }
