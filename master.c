@@ -46,6 +46,9 @@ int main (int argc, char **argv)
         tflag = 1;
         run_time = atoi(optarg);
         break;
+      default:
+        printf("Please use -h for help to see valid options.\n");
+        exit(EXIT_FAILURE);
     }
   }
 
