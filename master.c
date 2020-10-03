@@ -8,6 +8,7 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 
+char** buildstringarray(int *indexcount);
 int detachandremove(int shmid, void *shmaddr);
 
 int main (int argc, char **argv)
@@ -15,9 +16,16 @@ int main (int argc, char **argv)
   int childpid; // PID of a child process
   int id; // ID for the shared memory segment
   int key = 93; // Key to allocate shared memory segment
+
   int num_proc, num_children, opt, proc_cnt, run_time;
   int nflag = 0, sflag = 0, tflag = 0; // Flags for command line options
   proc_cnt = 0; // Counter for currently running children processes
+
+  int num_strings = 0; // Holds number of strings read in to allocate right amount of shared memory
+  char **strings = buildstringarray(&num_strings); // Holds strings read in to copy into shared memory
+  char **sharedstrings;
+
+  printf("Memory size needed for shared array: %zu\n", sizeof(char *) * num_strings);
 
   // Parse command line options
   while ((opt = getopt(argc, argv, "hn:s:t:")) != -1)
@@ -71,17 +79,12 @@ int main (int argc, char **argv)
   printf("num_children: %d\n", num_children);
   printf("run_time: %d\n", run_time);
 
-
-  // TESTING STRING ARRAY
-  char *strings[3] = {"how's", "it", "going?"};
-  char *sharedstrings[3];
-
   // dummy shared value
   int *sharedtotal;
 
   // Allocate shared memory segment
   // TODO: Change the sizeof() after testing with simple data type
-  if ((id = shmget(key, sizeof(int), IPC_CREAT | 0660)) == -1)
+  if ((id = shmget(key, sizeof(char *) * num_strings, IPC_CREAT | 0660)) == -1)
   {
     perror("Failed to create shared memory segment.");
     return 1;
@@ -91,16 +94,7 @@ int main (int argc, char **argv)
   printf("Successfully allocated shared memory with id: %d\n", id);
 
   // Attach to the allocated shared memory
-  //if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
-  //{
-  //  perror("Failed to attach shared memory segment.");
-  //  if (shmctl(id, IPC_RMID, NULL) == -1)
-  //    perror("Failed to remove memory segment.");
-  //  return 1;
-  //}
-
-  // TESTING WITH BASIC DATA TYPE Attach to the allocated shared memory
-  if ((sharedtotal = (int *) shmat(id, NULL, 0)) == (void *) - 1)
+  if ((sharedstrings = (char **) shmat(id, NULL, 0)) == (void *) - 1)
   {
     perror("Failed to attach shared memory segment.");
     if (shmctl(id, IPC_RMID, NULL) == -1)
@@ -108,9 +102,20 @@ int main (int argc, char **argv)
     return 1;
   }
 
+  // TESTING WITH BASIC DATA TYPE Attach to the allocated shared memory
+  //if ((sharedtotal = (int *) shmat(id, NULL, 0)) == (void *) - 1)
+  //{
+  //  perror("Failed to attach shared memory segment.");
+  //  if (shmctl(id, IPC_RMID, NULL) == -1)
+  //    perror("Failed to remove memory segment.");
+  //  return 1;
+  //}
+  printf("Successfully attached to the shared memory segment\n");
+
   // Detach from and remove the shared memory segment
+  detachandremove(id, sharedstrings);
   // TODO: TESTING WITH SIMPLE DATA TYPE: Change second argument after testing
-  detachandremove(id, sharedtotal);
+  //detachandremove(id, sharedtotal);
 
 
 
@@ -133,4 +138,26 @@ int detachandremove(int shmid, void *shmaddr)
   }
   errno = error;
   return -1;
+}
+
+// Builds and returns string array to copy into shared memory and by reference variable determines number of strings in array
+char** buildstringarray(int *indexcount) {
+  char buf[20]; // Buffer to hold each string read from stdin
+  char **strings = malloc(sizeof(char *)); // Dynamically built array to hold all strings from stdin
+
+  fgets(buf, 20, stdin); // Get first string from stdin
+  strings[*indexcount] = malloc(20); // Use malloc for element - will use realloc in loop
+  strcpy(strings[*indexcount], buf); // Copy read string into dynamic array
+  *indexcount += 1; // Increment index counter
+
+  // Get rest of strings from input file
+  while(fgets(buf, 20, stdin))
+  {
+    strings = realloc(strings, sizeof(*strings) * (*indexcount + 1)); // Increase size of dynamic array
+    strings[*indexcount] = malloc(20); // Allocate new element's memory space
+    strcpy(strings[*indexcount], buf); // Copy read string into dynamic array
+    *indexcount += 1; // Increment index counter
+  }
+
+  return strings;
 }
