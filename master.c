@@ -21,7 +21,7 @@ int main (int argc, char **argv)
   key_t key = ftok("/tmp", 'K'); // Key to allocate shared memory segment for array
 
   /* Values specified by command line arguments - defined below */
-  int num_proc, num_children, opt, run_time;
+  int max_proc, max_children, opt, run_time;
 
   int child_cnt = 0;                   // Counter for currently running children processes
   int nflag = 0, sflag = 0, tflag = 0; // Flags for command line options
@@ -29,8 +29,6 @@ int main (int argc, char **argv)
   int num_strings = 0; // Holds number of strings read in
   char **strings;      // Holds strings read in to copy into shared memory
   char *sharedstrings; // Array to hold strings in shared memory
-
-  strings = buildstringarray(&num_strings); // Read in strings to array and store number read in
 
   // Parse command line options
   while ((opt = getopt(argc, argv, "hn:s:t:")) != -1)
@@ -43,11 +41,11 @@ int main (int argc, char **argv)
         break; 
       case 'n': // Specify number of processes to be ran in total
         nflag = 1;
-        num_proc = atoi(optarg);
+        max_proc = atoi(optarg);
         break;
       case 's': // Specify number of children to be running at any one time
         sflag = 1;
-        num_children = atoi(optarg);
+        max_children = atoi(optarg);
         break;
       case 't': // Specify number of seconds the program will run before terminating
         tflag = 1;
@@ -60,13 +58,15 @@ int main (int argc, char **argv)
   }
 
 
-
   // Set default values for unused options
-  num_proc = nflag ? num_proc : 4;
-  num_children = sflag ? num_children : 2;
+  max_proc = nflag ? max_proc : 4;
+  max_children = sflag ? max_children : 2;
   run_time = tflag ? run_time : 100;
 
+  // Enforce hard limit of 20 on max processes to be ran
+  max_proc = max_proc > 20 ? 20 : max_proc;
 
+  strings = buildstringarray(&num_strings); // Read in strings from stdin to array and store number read in
 
   // Allocate shared memory segment for array
   if ((id = shmget(key, sizeof(char *) * STR_SIZE * num_strings, IPC_CREAT | 0660)) == -1)
@@ -74,11 +74,6 @@ int main (int argc, char **argv)
     perror("Failed to create shared memory segment.");
     return 1;
   }
-
-  // TESTING MESSAGE IF WE SUCCESSFULLY GET SHARED MEMORY
-  printf("Successfully allocated shared memory with id: %d\n", id);
-
-
 
   // Attach to the allocated shared memory
   if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
@@ -88,11 +83,6 @@ int main (int argc, char **argv)
       perror("Failed to remove memory segment.");
     return 1;
   }
-  printf("Successfully attached to the shared memory segment\n");
-
-
-
-  // TODO: Place strings into sharedstrings for all processes to access
 
   // Copy strings into shared memory array
   int i, j;       // For loop counters
@@ -114,11 +104,11 @@ int main (int argc, char **argv)
   int wpid; // PID of process parent just waited on
 
   // Max number of time loop will run and in turn the max number of processes that will be ran
-  int maxiterations = num_proc > num_strings ? num_strings : num_proc;
+  int maxiterations = max_proc > num_strings ? num_strings : max_proc;
 
   for (i = 0; i < maxiterations; i++)
   {
-    // Do stuff
+    // Fork fail check
     if ((childpid = fork()) == -1)
     {
       perror("Failed to create child process.");
@@ -126,45 +116,53 @@ int main (int argc, char **argv)
         perror("Failed to detach and remove shared memory segment.");
     }
 
-    child_cnt++; // Add one to currently running children count
 
     // Child Code
     if (childpid == 0)
     {
-      // TODO: - Replace hardcoded index to test, will need to use counter and replace in loop
-
-      char strid[100+1] = {'\0'};
+      char strid[100+1] = {'\0'}; // Create string from shared memory id
       sprintf(strid, "%d", id);
 
-      char strrow[100+1] = {'\0'};
+      char strrow[100+1] = {'\0'}; // Create string from index/row in shared array to access
       sprintf(strrow, "%d", i);
 
-      char strmaxsize[100+1] = {'\0'};
+      char strmaxsize[100+1] = {'\0'}; // Create string from max string size
       sprintf(strmaxsize, "%d", STR_SIZE);
 
+      // Create custom argv array to exec 'palin' with
       char *args[5] = {"palin", strid, strrow, strmaxsize, '\0'};
-      /* Arguments sent to exec-ed 'palin'
-        * argv[0] = "palin" executable
-        * argv[1] = id of shared memory array
-        * argv[2] = (index of string in shared memory array to test i.e. The 'row' in array to start from)
-        * argv[3] = max size of strings
-      */
+
+      /* * argv[0] = "palin" executable
+         * argv[1] = id of shared memory array
+         * argv[2] = index of string in shared memory array to test i.e. The 'row' in array to start from
+         * argv[3] = max size of strings */
+
       execv(args[0], args);
       perror("Child failed to exec command!\n");
     }
 
+
     // Parent code
     // TODO: - set timer to -t/run_time value, if it runs out kill all children, print message, exit
+
+    child_cnt++; // Increase count of children currently running
  
-    // If num of children running is at max wait before next loop
-    if (child_cnt == num_children)
+    // If num of children running is at max wait() before next iteration
+    if (child_cnt == max_children)
     {
       wpid = wait(NULL);
-      printf("Parent waited for pid: %i", wpid);
+      printf("Parent waited for pid: %i\n", wpid);
+      child_cnt--; // Decrement count of children currently running
     }
   }
 
-
+  // Wait for remaining child processes
+  while (child_cnt != 0)
+  {
+    wpid = wait(NULL);
+    printf("Parent waited for pid: %i\n", wpid);
+    child_cnt--; // Decrement count of children currently running
+  }
 
   // Detach from and remove the shared memory array segment
   detachandremove(id, sharedstrings);

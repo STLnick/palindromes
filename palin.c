@@ -16,18 +16,14 @@ void is_palindrome(char str[]);
 
 int main(int argc, char **argv)
 {
-  // TEST OUTPUT
-  printf("-----------------\n");
-  printf("Hello from palin!\n");
-  printf("-----------------\n");
+  printf("PID %d running -- ", getpid());
+
   char *sharedstrings;
 
   int id = atoi(argv[1]);
   int row = atoi(argv[2]);
   int strsize = atoi(argv[3]);
 
-  // TODO: Make this file access shared memory to test that string
-  
   // Attach to the allocated shared memory
   if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
   {
@@ -36,7 +32,6 @@ int main(int argc, char **argv)
       perror("Failed to remove memory segment.");
     return 1;
   }
-  printf("From 'palin': Successfully attached to shared memory! id: %i\n", id);
 
   int i;
   char buffer[strsize];
@@ -51,18 +46,14 @@ int main(int argc, char **argv)
     }
   }
 
-  printf("TEST: buffer = '%s'", buffer);
   is_palindrome(buffer);
   printf("\n");
 
-  
   // TODO: Develop code to enter the critical section
   //       Develop the criticalsection() code
   //         - Write to palin.out or nopalin.out
   //         - Write to output.log
   //       Develop code to exit the critical section
-
-
 
   // detach from shared memory segment
   detach(id, sharedstrings);
@@ -98,7 +89,6 @@ int detach(int shmid, void *shmaddr)
     error = errno;
   if (!error)
   {
-    printf("From 'palin': Successfully detached the shared memory segment - id: %d\n", shmid);
     return 0;
   }
   errno = error;
