@@ -75,7 +75,7 @@ int main (int argc, char **argv)
     return 1;
   }
 
-  // Attach to the allocated shared memory
+  // Attach to the allocated shared memory for array
   if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
   {
     perror("Failed to attach shared memory segment.");
@@ -106,6 +106,54 @@ int main (int argc, char **argv)
   // Max number of time loop will run and in turn the max number of processes that will be ran
   int maxiterations = max_proc > num_strings ? num_strings : max_proc;
 
+  int choosingid, numberid;
+  int *choosing;
+  int *number;
+
+  // Allocate shared 'choosing' array
+  if ((choosingid = shmget(key, sizeof(int) * maxiterations, IPC_CREAT | 0660)) == -1)
+  {
+    perror("Failed to create shared memory segment.");
+    return 1;
+  }
+
+  // Attach to 'choosing' memory segment
+  if ((choosing = (int *) shmat(choosingid, NULL, 0)) == (void *) - 1)
+  {
+    perror("Failed to attach shared memory segment.");
+    if (shmctl(choosingid, IPC_RMID, NULL) == -1)
+      perror("Failed to remove memory segment.");
+    return 1;
+  }
+
+  // Allocate shared 'number' array
+  if ((numberid = shmget(key, sizeof(int) * maxiterations, IPC_CREAT | 0660)) == -1)
+  {
+    perror("Failed to create shared memory segment.");
+    return 1;
+  }
+
+  // Attach to 'number' memory segment
+  if ((number = (int *) shmat(numberid, NULL, 0)) == (void *) - 1)
+  {
+    perror("Failed to attach shared memory segment.");
+    if (shmctl(numberid, IPC_RMID, NULL) == -1)
+      perror("Failed to remove memory segment.");
+    return 1;
+  }
+
+  // Initialize values of 'choosing' and 'number' all to 0
+  for (i = 0; i < maxiterations; i++)
+  {
+    choosing[i] = 0;
+    number[i] = 0;
+
+  }
+
+  /* * * * * * * * * * */
+  /* * PROCESS LOOP  * */
+  /* * * * * * * * * * */
+
   for (i = 0; i < maxiterations; i++)
   {
     // Fork fail check
@@ -120,22 +168,30 @@ int main (int argc, char **argv)
     // Child Code
     if (childpid == 0)
     {
-      char strid[100+1] = {'\0'}; // Create string from shared memory id
+      char strid[100+1] = {'\0'}; // Create string from shared memory array id
       sprintf(strid, "%d", id);
 
-      char strrow[100+1] = {'\0'}; // Create string from index/row in shared array to access
-      sprintf(strrow, "%d", i);
+      char str_choosingid[100+1] = {'\0'}; // Create string from shared memory choosing array id
+      sprintf(str_choosingid, "%d", choosingid);
+
+      char str_numberid[100+1] = {'\0'}; // Create string from shared memory number array id
+      sprintf(str_numberid, "%d", numberid);
+
+      char str_procindex[100+1] = {'\0'}; // Create string from loop index to identify each process
+      sprintf(str_procindex, "%d", i);
 
       char strmaxsize[100+1] = {'\0'}; // Create string from max string size
       sprintf(strmaxsize, "%d", STR_SIZE);
 
       // Create custom argv array to exec 'palin' with
-      char *args[5] = {"palin", strid, strrow, strmaxsize, '\0'};
+      char *args[5] = {"palin", strid, str_choosingid, str_numberid, str_procindex, strmaxsize, '\0'};
 
       /* * argv[0] = "palin" executable
          * argv[1] = id of shared memory array
-         * argv[2] = index of string in shared memory array to test i.e. The 'row' in array to start from
-         * argv[3] = max size of strings */
+         * argv[2] = id of shared memory choosing array
+         * argv[3] = id of shared memory number array
+         * argv[4] = index of string in shared memory array to test & identifier for process in 'choosing' and 'number' shared arrays
+         * argv[5] = max size of strings */
 
       execv(args[0], args);
       perror("Child failed to exec command!\n");
@@ -143,6 +199,7 @@ int main (int argc, char **argv)
 
 
     // Parent code
+
     // TODO: - set timer to -t/run_time value, if it runs out kill all children, print message, exit
 
     child_cnt++; // Increase count of children currently running
@@ -164,8 +221,10 @@ int main (int argc, char **argv)
     child_cnt--; // Decrement count of children currently running
   }
 
-  // Detach from and remove the shared memory array segment
+  // Detach from and remove the shared memory segments
   detachandremove(id, sharedstrings);
+  detachandremove(choosingid, choosing);
+  detachandremove(numberid, number);
   
   return 0;
 }

@@ -11,23 +11,27 @@ int is_palindrome(char str[]);
 void logfilewrite(FILE *fptr, int row, char str[]);
 void resultwrite(FILE *fptr, char str[]);
 
-/*
-* argv[0] = palin
-* argv[1] = id of shared memory segment
-* argv[2] = (index of string in shared memory array to test i.e. the 'row' in array to start)
-* argv[3] = max size of strings
-*/
+/* * argv[0] = "palin" executable
+   * argv[1] = id of shared memory array
+   * argv[2] = id of shared memory choosing array
+   * argv[3] = id of shared memory number array
+   * argv[4] = index of string in shared memory array to test & identifier for process in 'choosing' and 'number' shared arrays
+   * argv[5] = max size of strings */
 
 int main(int argc, char **argv)
 {
   FILE *fptr;          // File pointer to write to palin, nopalin and logfile
-  char *sharedstrings; // Shared memory array
+  char *sharedstrings; // Shared memory array for strings
+  int *choosing;       // Shared memory choosing array
+  int *number;         // Shared memory number array
 
   int id = atoi(argv[1]);
-  int row = atoi(argv[2]);
-  int strsize = atoi(argv[3]);
+  int choosingid = atoi(argv[2]);
+  int numberid = atoi(argv[3]);
+  int index = atoi(argv[4]);
+  int strsize = atoi(argv[5]);
 
-  // Attach to the allocated shared memory
+  // Attach to the allocated shared memory segments
   if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
   {
     perror("Failed to attach shared memory segment.");
@@ -35,6 +39,23 @@ int main(int argc, char **argv)
       perror("Failed to remove memory segment.");
     return 1;
   }
+
+  if ((choosing = (int *) shmat(choosingid, NULL, 0)) == (void *) - 1)
+  {
+    perror("Failed to attach shared memory segment.");
+    if (shmctl(choosingid, IPC_RMID, NULL) == -1)
+      perror("Failed to remove memory segment.");
+    return 1;
+  }
+
+  if ((number = (int *) shmat(numberid, NULL, 0)) == (void *) - 1)
+  {
+    perror("Failed to attach shared memory segment.");
+    if (shmctl(numberid, IPC_RMID, NULL) == -1)
+      perror("Failed to remove memory segment.");
+    return 1;
+  }
+
 
   int i;                // Loop counter
   char buffer[strsize]; // Buffer to store word as string
