@@ -8,6 +8,8 @@
 
 int detach(int shmid, void *shmaddr);
 int is_palindrome(char str[]);
+void logfilewrite(FILE *fptr, int row, char str[]);
+void resultwrite(FILE *fptr, char str[]);
 
 /*
 * argv[0] = palin
@@ -19,7 +21,6 @@ int is_palindrome(char str[]);
 int main(int argc, char **argv)
 {
   FILE *fptr;          // File pointer to write to palin, nopalin and logfile
-  int palinresult;     // Stores result of is_palindrome check
   char *sharedstrings; // Shared memory array
 
   int id = atoi(argv[1]);
@@ -49,19 +50,11 @@ int main(int argc, char **argv)
     }
   }
 
-  // Check if string is a palindrome and store result
-  palinresult = is_palindrome(buffer);
-
   // Open, write to, and close either palin or nopalin depending on result
-  fptr = palinresult ? fopen("./palin.out", "a") : fopen("./nopalin.out", "a");
-  fprintf(fptr, "%s\n", buffer);
-  fclose(fptr);
+  resultwrite(fptr, buffer);
 
   // Open, write to, and close logfile
-  fptr = fopen("output.log", "a");
-  fprintf(fptr, "%i %i %s\n", getpid(), row, buffer);
-  fclose(fptr);
-  
+  logfilewrite(fptr, row, buffer);
 
 
   // TODO: Develop code to enter the critical section
@@ -76,6 +69,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
+// Check if supplied string is a palindrome
 int is_palindrome(char str[])
 {
   int i = 0;               // Start of string index
@@ -102,4 +96,18 @@ int detach(int shmid, void *shmaddr)
 
   errno = error;
   return -1;
+}
+
+void logfilewrite(FILE *fptr, int row, char str[])
+{
+  fptr = fopen("output.log", "a");
+  fprintf(fptr, "%i %i %s\n", getpid(), row, str);
+  fclose(fptr);
+}
+
+void resultwrite(FILE *fptr, char str[])
+{
+  fptr = is_palindrome(str) ? fopen("./palin.out", "a") : fopen("./nopalin.out", "a");
+  fprintf(fptr, "%s\n", str);
+  fclose(fptr);
 }
