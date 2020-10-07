@@ -16,6 +16,7 @@ int is_palindrome(char str[]);
 
 int main(int argc, char **argv)
 {
+  FILE *fptr;
   int palinresult;
   char *sharedstrings;
 
@@ -47,6 +48,16 @@ int main(int argc, char **argv)
 
   palinresult = is_palindrome(buffer);
   printf("\n");
+
+  // TESTING - run just one process and see if this works
+  if (palinresult)
+    fptr = fopen("./palin.out", "a");
+  else
+    fptr = fopen("./nopalin.out", "a");
+
+  fprintf(fptr, "%s", buffer);
+
+  fclose(fptr);
 
   // TODO: Develop code to enter the critical section
   //       Develop the criticalsection() code
