@@ -5,7 +5,7 @@
 #include <sys/shm.h>
 
 int detach(int shmid, void *shmaddr);
-void is_palindrome(char str[]);
+int is_palindrome(char str[]);
 
 /*
 * argv[0] = palin
@@ -16,8 +16,7 @@ void is_palindrome(char str[]);
 
 int main(int argc, char **argv)
 {
-  printf("PID %d running -- ", getpid());
-
+  int palinresult;
   char *sharedstrings;
 
   int id = atoi(argv[1]);
@@ -46,7 +45,7 @@ int main(int argc, char **argv)
     }
   }
 
-  is_palindrome(buffer);
+  palinresult = is_palindrome(buffer);
   printf("\n");
 
   // TODO: Develop code to enter the critical section
@@ -61,23 +60,17 @@ int main(int argc, char **argv)
   return 0;
 }
 
-void is_palindrome(char str[])
+int is_palindrome(char str[])
 {
-  int i = 0; // Start of string index
+  int i = 0;               // Start of string index
   int j = strlen(str) - 1; // End of string index
-
-  // TODO - palindrome ? write string to palin.out : write string to nopalin.out
-  //      - write to logfile => (PID IndexOfString String)
 
   while (j > 1)
   {
     if (str[i++] != str[j--])
-    {
-      printf("%s is NOT a palindrome!\n", str);
-      return;
-    }
+      return 0; // False
   }
-  printf("%s IS a palindrome!\n", str);
+  return 1; // True
 }
 
 // Detach from the shared memory segment
@@ -87,10 +80,10 @@ int detach(int shmid, void *shmaddr)
 
   if (shmdt(shmaddr) == -1)
     error = errno;
+
   if (!error)
-  {
     return 0;
-  }
+
   errno = error;
   return -1;
 }
