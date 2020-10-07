@@ -12,7 +12,7 @@ char** buildstringarray(int *indexcount);
 int detachandremove(int shmid, void *shmaddr);
 void displayhelpinfo();
 
-#define STR_SIZE 20
+#define STR_SIZE 80
 
 int main (int argc, char **argv)
 {
@@ -215,7 +215,7 @@ void displayhelpinfo()
   printf("\nPalindrome master program\n");
   printf("-------------------------\n");
   printf("Example command to run ./master:\n\n");
-  printf("./master -n 10 -s 4 -t 60\n\n");
+  printf("./master -n 10 -s 4 -t 60 < palindromes\n\n");
   printf("-------------------------\n");
   printf("Program options information:\n");
   printf("-n = The total number of processes to be ran.\n");
@@ -229,4 +229,8 @@ void displayhelpinfo()
   printf("-n = 4\n");
   printf("-s = 2\n");
   printf("-t = 100\n\n");
+  printf("-------------------------\n");
+  printf("Program *MUST* be supplied with a file redirect '< palindromes'\n");
+  printf("where 'palindromes' is a simple file with plain text and a word\n");
+  printf("on each line.\n");
 }
