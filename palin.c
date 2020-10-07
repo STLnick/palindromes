@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/shm.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 int detach(int shmid, void *shmaddr);
 int is_palindrome(char str[]);
@@ -16,9 +18,9 @@ int is_palindrome(char str[]);
 
 int main(int argc, char **argv)
 {
-  FILE *fptr;
-  int palinresult;
-  char *sharedstrings;
+  FILE *fptr;          // File pointer to write to palin, nopalin and logfile
+  int palinresult;     // Stores result of is_palindrome check
+  char *sharedstrings; // Shared memory array
 
   int id = atoi(argv[1]);
   int row = atoi(argv[2]);
@@ -33,9 +35,10 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  int i;
-  char buffer[strsize];
-  int nullfound = 0;
+  int i;                // Loop counter
+  char buffer[strsize]; // Buffer to store word as string
+  int nullfound = 0;    // Flag if \0 is found
+
   for (i = 0; i < strsize; i++)
   {
     if (!nullfound)
@@ -46,18 +49,20 @@ int main(int argc, char **argv)
     }
   }
 
+  // Check if string is a palindrome and store result
   palinresult = is_palindrome(buffer);
-  printf("\n");
 
-  // TESTING - run just one process and see if this works
-  if (palinresult)
-    fptr = fopen("./palin.out", "a");
-  else
-    fptr = fopen("./nopalin.out", "a");
-
-  fprintf(fptr, "%s", buffer);
-
+  // Open, write to, and close either palin or nopalin depending on result
+  fptr = palinresult ? fopen("./palin.out", "a") : fopen("./nopalin.out", "a");
+  fprintf(fptr, "%s\n", buffer);
   fclose(fptr);
+
+  // Open, write to, and close logfile
+  fptr = fopen("output.log", "a");
+  fprintf(fptr, "%i %i %s\n", getpid(), row, buffer);
+  fclose(fptr);
+  
+
 
   // TODO: Develop code to enter the critical section
   //       Develop the criticalsection() code
