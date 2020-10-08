@@ -1,0 +1,61 @@
+OS Project 2
+Master - Palindrome
+
+Version Control:
+GitHub repo: https://github.com/STLnick/palin
+
+To run the program:
+First run 'make' to build 'master' and 'palin'
+
+To execute with the sample data file run:
+
+./master -n 3 < palindromes
+
+Where '3' is the limit of processes to run total and 'palindromes' is the file input to redirect to 'master'.
+
+Program options:
+  -n = The total number of processes to be ran.
+  -s = The number of children processes to be running at any one time.
+  -t = The time in seconds that the program will execute. This will end
+       execution even if the processes haven't finished the tasks.
+
+Default value information:
+  All options specified above are optional and will use the\n");
+  following default values if not specified.\n\n");
+  -n = 4
+  -s = 2
+  -t = 100
+
+  NOTE: Any Negative values passed will be set to these default values
+        Any excessive values will be set to a ceiling value.
+
+  Program *MUST* be supplied with a file redirect '< palindromes'
+  where 'palindromes' is a simple file with plain text and a word
+  on each line.
+
+What Works:
+- Parses command line options
+- Sets appropriate defaults if certain options aren't used
+- Limits and checks are imposed on arguments for sanity
+- Uses perror for errors throughout program
+- Program utilizes options passed to it
+	- Usage help will display on use of -h
+	- Only -n processes will run (or less if less strings are provided in input)
+	- Only -s children run at any one time
+	- Program will timeout after -t seconds
+- Program forks, execs and waits
+- Timeout kills all processes
+- Program writes in specified formats to palin.out, nopalin.out, and output.log
+
+What Doesn't Work:
+- Timeout does not deallocate shared memory
+- Not sure why but after implementing shared 'choosing' and 'number' the first word in the input is not read properly
+- Program does not handle ctrl+c SIGINTs
+- Program doesn't write to output.log on timeout
+
+Uncertainties:
+- When utilizing printf for some visual checks of program execution it appeared as though the Bakery Algorithm
+  implementation wasn't working correctly. The numbers being stored (max + 1) in number[index] were not persisting
+  it seemed like. Unsure if this is causing a race in the files being written to but they seem okay.
+
+Commit Log:
