@@ -1,16 +1,46 @@
+#define _XOPEN_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/shm.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 
 char** buildstringarray(int *indexcount);
 int detachandremove(int shmid, void *shmaddr);
 void displayhelpinfo();
+
+static void myhandler(int s)
+{
+  // Free shared memory
+  
+  // Kill children processes
+  kill(0, SIGINT);
+}
+
+static int setupinterrupt()
+{
+  struct sigaction act;
+  act.sa_handler = myhandler;
+  act.sa_flags = 0;
+  return (sigemptyset(&act.sa_mask) || sigaction(SIGALRM, &act, NULL));
+}
+
+static int setupitimer(int time) 
+{
+  struct itimerval value;
+  value.it_interval.tv_sec = 0;
+  value.it_interval.tv_usec = 0;
+  value.it_value.tv_sec = time;
+  value.it_value.tv_usec = 0;
+
+  return(setitimer(ITIMER_REAL, &value, NULL));
+}
 
 #define STR_SIZE 80
 
@@ -70,6 +100,20 @@ int main (int argc, char **argv)
   max_children = max_children > 0 ? max_children : 2;
   run_time = run_time > 120 ? 120 : run_time;
   run_time = run_time > 0 ? run_time : 100;
+
+  // Setup alarm interrupt handler
+  if (setupinterrupt() == -1)
+  {
+    perror("Failed to setup SIGALRM handler");
+    return 1;
+  }
+
+  // Setup timer
+  if (setupitimer(run_time) == -1)
+  {
+    perror("Failed to setup timer");
+    return 1;
+  }
 
   strings = buildstringarray(&num_strings); // Read in strings from stdin to array and store number read in
 
@@ -196,26 +240,15 @@ int main (int argc, char **argv)
       /* * argv[0] = "palin" executable
          * argv[1] = id of shared memory array
          * argv[2] = id of shared memory choosing array
-         * argv[3] = id of shared memory number array
-         * argv[4] = index of string in shared memory array to test & identifier for process in 'choosing' and 'number' shared arrays
-         * argv[5] = max size of strings
-         * argv[6] = number of processes that will be ran */
-
+         * argv[3] = id of shared memory number array */
       execv(args[0], args);
-      perror("Child failed to exec command!\n");
+      perror("Child failed to exec");
     }
 
-
-    // Parent code
-
-    // TODO: - set timer to -t/run_time value, if it runs out kill all children, print message, exit
- 
-    // If num of children running is at max wait() before next iteration
     if (child_cnt == max_children)
     {
-      wpid = wait(NULL);
-      printf("Parent waited for pid: %i\n", wpid);
-      child_cnt--; // Decrement count of children currently running
+      wait(NULL);
+      child_cnt--;
     }
   }
 
@@ -302,3 +335,4 @@ void displayhelpinfo()
   printf("where 'palindromes' is a simple file with plain text and a word\n");
   printf("on each line.\n");
 }
+
