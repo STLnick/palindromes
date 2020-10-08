@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+void criticalsection(FILE *fptr, int row, char str[]);
 int detach(int shmid, void *shmaddr);
 int is_palindrome(char str[]);
 void logfilewrite(FILE *fptr, int row, char str[]);
@@ -16,20 +17,23 @@ void resultwrite(FILE *fptr, char str[]);
    * argv[2] = id of shared memory choosing array
    * argv[3] = id of shared memory number array
    * argv[4] = index of string in shared memory array to test & identifier for process in 'choosing' and 'number' shared arrays
-   * argv[5] = max size of strings */
+   * argv[5] = max size of strings
+   * argv[6] = number of processes that will be ran */
 
 int main(int argc, char **argv)
 {
   FILE *fptr;          // File pointer to write to palin, nopalin and logfile
   char *sharedstrings; // Shared memory array for strings
-  int *choosing;       // Shared memory choosing array
+  int *choosing;      // Shared memory choosing array
   int *number;         // Shared memory number array
+  int i;               // Loop counter
 
   int id = atoi(argv[1]);
   int choosingid = atoi(argv[2]);
   int numberid = atoi(argv[3]);
   int index = atoi(argv[4]);
   int strsize = atoi(argv[5]);
+  int num_procs = atoi(argv[6]);
 
   // Attach to the allocated shared memory segments
   if ((sharedstrings = (char *) shmat(id, NULL, 0)) == (void *) - 1)
@@ -57,37 +61,63 @@ int main(int argc, char **argv)
   }
 
 
-  int i;                // Loop counter
   char buffer[strsize]; // Buffer to store word as string
   int nullfound = 0;    // Flag if \0 is found
 
+  // Extract string to test from shared array
   for (i = 0; i < strsize; i++)
   {
     if (!nullfound)
     {
-      buffer[i] = sharedstrings[row * strsize + i];
-      if (sharedstrings[row * strsize + i] == '\0')
+      buffer[i] = sharedstrings[index * strsize + i];
+      if (sharedstrings[index * strsize + i] == '\0')
         nullfound = 1;
     }
   }
 
-  // Open, write to, and close either palin or nopalin depending on result
-  resultwrite(fptr, buffer);
+  /* * CODE TO ENTER C.S. * */
+  choosing[index] = 1;
+  int max = 0;
+  for(i = 0; i < num_procs; i++)
+  {
+    if (number[i] > max)
+      max = number[i];
+  }
+  number[index] = max + 1;
+  choosing[index] = 0;
 
-  // Open, write to, and close logfile
-  logfilewrite(fptr, row, buffer);
+  for (i = 0; i < num_procs; i++)
+  {
+    while (choosing[i] != 0);
+    while ((number[i] != 0) && (number[i] < number[index] || (number[i] == number[index] && i < index)));
+  }
 
+  /* * * * * * * * * * * * */
+  /* * CRITICAL SECTION * */
+  /* * * * * * * * * * * * */
 
-  // TODO: Develop code to enter the critical section
-  //       Develop the criticalsection() code
-  //         - Write to palin.out or nopalin.out
-  //         - Write to output.log
-  //       Develop code to exit the critical section
+  criticalsection(fptr, index, buffer);
 
-  // detach from shared memory segment
+  /* * * * * * * * * * * * * * */
+  /* * END CRITICAL SECTION  * */
+  /* * * * * * * * * * * * * * */
+
+  // Reset number in shared number array
+  number[index] = 0;
+
+  // detach from shared memory segments
   detach(id, sharedstrings);
+  detach(choosingid, choosing);
+  detach(numberid, number);
 
   return 0;
+}
+
+void criticalsection(FILE *fptr, int row, char str[])
+{
+  sleep(2);                     // Delay execution by 2 seconds
+  resultwrite(fptr, str);       // Open, write to, and close either palin or nopalin depending on result
+  logfilewrite(fptr, row, str); // Open, write to, and close logfile
 }
 
 // Check if supplied string is a palindrome
@@ -119,6 +149,7 @@ int detach(int shmid, void *shmaddr)
   return -1;
 }
 
+// Open, write to, and close output.log file
 void logfilewrite(FILE *fptr, int row, char str[])
 {
   fptr = fopen("output.log", "a");
@@ -126,6 +157,7 @@ void logfilewrite(FILE *fptr, int row, char str[])
   fclose(fptr);
 }
 
+// Open, write to, and close either palin.out or nopalin.out file
 void resultwrite(FILE *fptr, char str[])
 {
   fptr = is_palindrome(str) ? fopen("./palin.out", "a") : fopen("./nopalin.out", "a");

@@ -63,8 +63,13 @@ int main (int argc, char **argv)
   max_children = sflag ? max_children : 2;
   run_time = tflag ? run_time : 100;
 
-  // Enforce hard limit of 20 on max processes to be ran
+  // Enforce hard limits on options
   max_proc = max_proc > 20 ? 20 : max_proc;
+  max_proc = max_proc > 0 ? max_proc : 4;
+  max_children = max_children > 5 ? 5 : max_children;
+  max_children = max_children > 0 ? max_children : 2;
+  run_time = run_time > 120 ? 120 : run_time;
+  run_time = run_time > 0 ? run_time : 100;
 
   strings = buildstringarray(&num_strings); // Read in strings from stdin to array and store number read in
 
@@ -142,12 +147,11 @@ int main (int argc, char **argv)
     return 1;
   }
 
-  // Initialize values of 'choosing' and 'number' all to 0
+  // Initialize values of 'choosing' and 'number'
   for (i = 0; i < maxiterations; i++)
   {
     choosing[i] = 0;
     number[i] = 0;
-
   }
 
   /* * * * * * * * * * */
@@ -163,7 +167,7 @@ int main (int argc, char **argv)
       if (detachandremove(id, sharedstrings) == -1)
         perror("Failed to detach and remove shared memory segment.");
     }
-
+    child_cnt++; // Increase count of children currently running
 
     // Child Code
     if (childpid == 0)
@@ -183,15 +187,19 @@ int main (int argc, char **argv)
       char strmaxsize[100+1] = {'\0'}; // Create string from max string size
       sprintf(strmaxsize, "%d", STR_SIZE);
 
+      char strnumprocs[100+1] = {'\0'}; // Create string from number of processes to be ran
+      sprintf(strnumprocs, "%d", maxiterations);
+
       // Create custom argv array to exec 'palin' with
-      char *args[5] = {"palin", strid, str_choosingid, str_numberid, str_procindex, strmaxsize, '\0'};
+      char *args[8] = {"palin", strid, str_choosingid, str_numberid, str_procindex, strmaxsize, strnumprocs, '\0'};
 
       /* * argv[0] = "palin" executable
          * argv[1] = id of shared memory array
          * argv[2] = id of shared memory choosing array
          * argv[3] = id of shared memory number array
          * argv[4] = index of string in shared memory array to test & identifier for process in 'choosing' and 'number' shared arrays
-         * argv[5] = max size of strings */
+         * argv[5] = max size of strings
+         * argv[6] = number of processes that will be ran */
 
       execv(args[0], args);
       perror("Child failed to exec command!\n");
@@ -201,8 +209,6 @@ int main (int argc, char **argv)
     // Parent code
 
     // TODO: - set timer to -t/run_time value, if it runs out kill all children, print message, exit
-
-    child_cnt++; // Increase count of children currently running
  
     // If num of children running is at max wait() before next iteration
     if (child_cnt == max_children)
@@ -244,6 +250,7 @@ int detachandremove(int shmid, void *shmaddr)
     return 0;
   }
   errno = error;
+  perror("Error: ");
   return -1;
 }
 
@@ -288,6 +295,8 @@ void displayhelpinfo()
   printf("-n = 4\n");
   printf("-s = 2\n");
   printf("-t = 100\n\n");
+  printf("NOTE: Any Negative values passed will be set to these default values");
+  printf("      Any excessive values will be set to a ceiling value.");
   printf("-------------------------\n");
   printf("Program *MUST* be supplied with a file redirect '< palindromes'\n");
   printf("where 'palindromes' is a simple file with plain text and a word\n");
