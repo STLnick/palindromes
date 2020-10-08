@@ -2,7 +2,7 @@ OS Project 2
 Master - Palindrome
 
 Version Control:
-GitHub repo: https://github.com/STLnick/palin
+GitHub repo: https://github.com/STLnick/palindromes
 
 To run the program:
 First run 'make' to build 'master' and 'palin'
@@ -59,3 +59,64 @@ Uncertainties:
   it seemed like. Unsure if this is causing a race in the files being written to but they seem okay.
 
 Commit Log:
+(All commits also on GitHub: https://github.com/STLnick/palindromes)
+
+Commits on Oct 8, 2020
+
+Add output to stderr on Timer Expiration and Enter/Exit of Critical Section
+
+📝 Add README file describing project, what works, what doesn't, etc.
+
+Implement timer that takes arg and kills processes on expiration
+
+Implemented Bakery algo but it is not working as expected
+
+Commits on Oct 7, 2020
+
+🚧 Allocate new memory segments, pass additional args to palin and atttach in palin
+
+🎨 Abstract file open, write and closes to separate functions
+
+🚧 Write to output file appropriate message from child process
+
+🚧 Open and write to palin/nopalin text files based on result
+
+💬 Add a word to text file
+
+🔥 Remove many testing messages
+
+💬 Change words in text file
+
+🚧 Make is_palindrome return int for true/false to determine which fille to write to
+
+Commits on Oct 6, 2020
+
+✨ Implement loop to fork appropriate # of processes and wait at limit
+
+💥 ✨ Lots of breaking changes resulting in having a shared mem array a accessed in both exe files
+
+Commits on Oct 3, 2020
+
+🚧 Allocate and attach shared array - need to ensure strings can be sttored and shared still
+
+Commits on Oct 2, 2020
+
+🚧 Allocate, attach, detach and remove simple shared memory segment
+
+✨ Implement function to check if a string is a palindrome
+
+🚸 Add switch case and message upon use of invalid flag to help user
+
+✨ Refactor -h to display useful info on how to run program and its opptions
+
+🚧 Exit program if -h option is used
+
+Commits on Oct 1, 2020
+
+✨ Successfully parse command line options and set defaults if not used
+
+🚧 Use Hello World to ensure makefile builds correctly
+
+🌱 Starter files for two executables to be built
+
+🎉 Initial commit 
