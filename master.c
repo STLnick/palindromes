@@ -17,18 +17,29 @@ void displayhelpinfo();
 
 static void myhandler(int s)
 {
-  // Free shared memory
+  fprintf(stderr, "Timer expired! Program terminating...\n");
+
+  // TODO: Free shared memory
   
   // Kill children processes
   kill(0, SIGINT);
+  exit(0);
 }
 
-static int setupinterrupt()
+static int setupalrminterrupt()
 {
   struct sigaction act;
   act.sa_handler = myhandler;
   act.sa_flags = 0;
   return (sigemptyset(&act.sa_mask) || sigaction(SIGALRM, &act, NULL));
+}
+
+static int setupctrlcinterrupt()
+{
+  struct sigaction act2;
+  act2.sa_handler = myhandler;
+  act2.sa_flags = 0;
+  return (sigemptyset(&act2.sa_mask) || sigaction(SIGINT, &act2, NULL));
 }
 
 static int setupitimer(int time) 
@@ -102,9 +113,16 @@ int main (int argc, char **argv)
   run_time = run_time > 0 ? run_time : 100;
 
   // Setup alarm interrupt handler
-  if (setupinterrupt() == -1)
+  if (setupalrminterrupt() == -1)
   {
     perror("Failed to setup SIGALRM handler");
+    return 1;
+  }
+
+  // Setup alarm interrupt handler
+  if (setupctrlcinterrupt() == -1)
+  {
+    perror("Failed to setup SIGINT handler");
     return 1;
   }
 

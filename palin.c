@@ -116,9 +116,11 @@ int main(int argc, char **argv)
 
 void criticalsection(FILE *fptr, int row, char str[])
 {
+  fprintf(stderr, "Process %i entered Critical Section\n", row);
   sleep(2);                     // Delay execution by 2 seconds
   resultwrite(fptr, str);       // Open, write to, and close either palin or nopalin depending on result
   logfilewrite(fptr, row, str); // Open, write to, and close logfile
+  fprintf(stderr, "Process %i exiting C.S.\n", row);
 }
 
 // Check if supplied string is a palindrome
